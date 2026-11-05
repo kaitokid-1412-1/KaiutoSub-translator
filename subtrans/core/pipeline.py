@@ -207,6 +207,9 @@ class Pipeline:
                                     input_path=extracted_bitmap,
                                     timeout_seconds=self.cfg.ocr.timeout_seconds,
                                     subtitleedit_path=self.cfg.ocr.subtitleedit_path,
+                                    ocr_engine=self.cfg.ocr.engine,
+                                    use_gpu=self.cfg.ocr.use_gpu,
+                                    language=self.cfg.ocr.language,
                                 )
                                 if ocr_result and ocr_result.exists():
                                     sub_to_translate = ocr_result

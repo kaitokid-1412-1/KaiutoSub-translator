@@ -167,6 +167,30 @@
           </div>
 
           <div class="form-row">
+            <div class="form-group col-4">
+              <label for="cfg-ocr-engine">موتور OCR:</label>
+              <select id="cfg-ocr-engine">
+                <option value="paddleocr">PaddleOCR (دقیق‌ترین و مدرن‌ترین)</option>
+                <option value="tesseract">Tesseract (سنتی)</option>
+                <option value="nocr">nOCR (داخلی سبک)</option>
+              </select>
+            </div>
+            <div class="form-group col-4">
+              <label for="cfg-ocr-mode">شتاب‌دهنده سخت‌افزاری OCR:</label>
+              <select id="cfg-ocr-mode">
+                <option value="gpu">GPU Version (کارت گرافیک - بسیار سریع)</option>
+                <option value="cpu">Normal Version (پردازنده CPU)</option>
+              </select>
+            </div>
+            <div class="form-group col-4">
+              <label class="checkbox-label" style="margin-top: 28px;">
+                <input type="checkbox" id="cfg-ocr-enabled" checked>
+                فعال بودن تبدیل خودکار زیرنویس تصویری (OCR)
+              </label>
+            </div>
+          </div>
+
+          <div class="form-row">
             <div class="form-group col-12">
               <label for="cfg-custom-prompt">دستورالعمل سفارشی یا پرامپت اضافی (Custom Prompt):</label>
               <textarea id="cfg-custom-prompt" rows="2" placeholder="مثلاً: تمام اسامی افسران با درجه نظامی به فارسی برگردانده شود یا..."></textarea>

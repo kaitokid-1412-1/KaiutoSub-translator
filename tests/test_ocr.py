@@ -56,7 +56,7 @@ def test_ocr_successful_simulated_run(tmp_path: Path):
     script_file = tmp_path / "mock_se.py"
     # When called with /outputfilename:path or arguments, it creates an srt file
     script_content = (
-        "import sys\n"
+        "import sys, os\n"
         "from pathlib import Path\n"
         "for arg in sys.argv:\n"
         "    if arg.startswith('/outputfilename:'):\n"
@@ -70,13 +70,29 @@ def test_ocr_successful_simulated_run(tmp_path: Path):
     fake_sup.write_bytes(b"dummy sup")
     target_srt = tmp_path / "sample.ocr.srt"
 
+    # Test paddleocr with GPU enabled
     res = ocr_bitmap_subtitle(
         input_path=fake_sup,
         output_path=target_srt,
         timeout_seconds=10,
         subtitleedit_path=str(script_file),
+        ocr_engine="paddleocr",
+        use_gpu=True,
     )
 
     assert res is not None
     assert res.exists()
     assert "Hello world" in res.read_text(encoding="utf-8")
+
+    # Test paddleocr with normal CPU version (use_gpu=False)
+    target_srt_cpu = tmp_path / "sample_cpu.ocr.srt"
+    res_cpu = ocr_bitmap_subtitle(
+        input_path=fake_sup,
+        output_path=target_srt_cpu,
+        timeout_seconds=10,
+        subtitleedit_path=str(script_file),
+        ocr_engine="paddleocr",
+        use_gpu=False,
+    )
+    assert res_cpu is not None
+    assert res_cpu.exists()

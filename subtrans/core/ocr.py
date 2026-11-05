@@ -54,10 +54,13 @@ def ocr_bitmap_subtitle(
     output_path: Optional[Path] = None,
     timeout_seconds: int = 180,
     subtitleedit_path: str = "",
-    ocr_engine: str = "tesseract",
+    ocr_engine: str = "paddleocr",
+    use_gpu: bool = True,
+    language: str = "en",
 ) -> Optional[Path]:
     """Perform OCR on bitmap subtitles (e.g. .sup, .sub) with watchdog process termination.
     
+    Supports PaddleOCR (GPU / normal CPU version) via SubtitleEdit / seconv or direct execution.
     If SubtitleEdit is unavailable or timeout occurs, raises appropriate exceptions.
     """
     se_bin = find_subtitleedit(subtitleedit_path)
@@ -75,6 +78,19 @@ def ocr_bitmap_subtitle(
     is_seconv = "seconv" in se_bin.name.lower()
     is_script = se_bin.suffix.lower() in (".py", ".bat", ".cmd", ".sh")
 
+    # Map engine name to SubtitleEdit / seconv parameters
+    # PaddleOCR engine alias is 'paddle' in seconv
+    engine_arg = "paddle" if ocr_engine.lower() in ("paddleocr", "paddle") else ocr_engine.lower()
+
+    # Pass environment variables for Paddle GPU / CPU selection
+    env = os.environ.copy()
+    if use_gpu:
+        env["FLAGS_selected_gpus"] = "0"
+        env["PADDLE_OCR_USE_GPU"] = "1"
+    else:
+        env["CUDA_VISIBLE_DEVICES"] = ""
+        env["PADDLE_OCR_USE_GPU"] = "0"
+
     if is_script:
         if se_bin.suffix.lower() == ".py":
             cmd = [
@@ -83,7 +99,7 @@ def ocr_bitmap_subtitle(
                 "/convert",
                 str(input_path),
                 "subrip",
-                f"/ocrengine:{ocr_engine}",
+                f"/ocrengine:{engine_arg}",
                 "/overwrite",
                 f"/outputfilename:{output_path}",
             ]
@@ -101,7 +117,8 @@ def ocr_bitmap_subtitle(
             str(se_bin),
             str(input_path),
             "subrip",
-            f"--ocr-engine:{ocr_engine}",
+            f"--ocr-engine:{engine_arg}",
+            f"--ocr-language:{language}",
             "--overwrite",
             f"--output-filename:{output_path.name}",
             f"--output-folder:{output_path.parent}",
@@ -113,7 +130,7 @@ def ocr_bitmap_subtitle(
             "/convert",
             str(input_path),
             "subrip",
-            f"/ocrengine:{ocr_engine}",
+            f"/ocrengine:{engine_arg}",
             "/overwrite",
             f"/outputfilename:{output_path}",
         ]
@@ -126,6 +143,7 @@ def ocr_bitmap_subtitle(
         text=True,
         encoding="utf-8",
         errors="replace",
+        env=env,
     )
 
     try:

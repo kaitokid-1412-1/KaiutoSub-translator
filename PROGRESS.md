@@ -34,6 +34,7 @@ Current milestone: M6 (OCR & Hardening Complete)
 - **2026-11-05:** Editable text-file tone presets in `user_data_dir/presets/` with support for custom user presets and system prompt overrides.
 - **2026-11-05:** Web UI updated with Context stage pill, custom prompt textarea, and glossary inputs.
 - **2026-11-05:** Milestone M6 implemented: Bitmap subtitle OCR support (`subtrans/core/ocr.py`) with support for both modern `seconv` and classic `SubtitleEdit.exe`.
+- **2026-11-05:** Configured PaddleOCR as the primary OCR engine with GPU acceleration (`use_gpu: True`) and normal CPU version toggle (`use_gpu: False`).
 - **2026-11-05:** Subprocess watchdog implemented with automatic process-tree termination on timeout and queue continuation without hangs.
 - **2026-11-05:** Complete Persian error messages verified matching SPEC section 8 (FFmpeg missing, Gateway unreachable, 401/403, 429/quota clean pause, OCR timeout, No subtitle track, Bad JSON auto-retry, and Target exists rules).
 - **2026-11-05:** Full test suite expanded to 59/59 passing tests across all modules.

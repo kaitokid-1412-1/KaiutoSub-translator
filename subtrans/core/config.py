@@ -31,6 +31,9 @@ class OcrConfig:
     enabled: bool = True
     timeout_seconds: int = 180
     subtitleedit_path: str = ""
+    engine: str = "paddleocr"  # paddleocr | tesseract | nocr | binaryocr
+    use_gpu: bool = True  # True: GPU accelerated; False: CPU normal version
+    language: str = "en"
 
 
 @dataclass

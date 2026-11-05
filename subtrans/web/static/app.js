@@ -74,6 +74,9 @@
   const cfgBatchLines = document.getElementById("cfg-batch-lines");
   const cfgOverwrite = document.getElementById("cfg-overwrite");
   const cfgCustomPrompt = document.getElementById("cfg-custom-prompt");
+  const cfgOcrEngine = document.getElementById("cfg-ocr-engine");
+  const cfgOcrMode = document.getElementById("cfg-ocr-mode");
+  const cfgOcrEnabled = document.getElementById("cfg-ocr-enabled");
   const cfgGlossaryTerms = document.getElementById("cfg-glossary-terms");
   const cfgGlossaryKeep = document.getElementById("cfg-glossary-keep");
   const cfgSeriesSynopsis = document.getElementById("cfg-series-synopsis");
@@ -107,6 +110,9 @@
         cfgBatchLines.value = data.translate?.batch_lines || 30;
         cfgOverwrite.checked = !!data.general?.overwrite_existing;
         cfgCustomPrompt.value = data.translate?.custom_prompt || "";
+        cfgOcrEngine.value = data.ocr?.engine || "paddleocr";
+        cfgOcrMode.value = (data.ocr?.use_gpu !== false) ? "gpu" : "cpu";
+        cfgOcrEnabled.checked = data.ocr?.enabled !== false;
       }
     } catch (e) {
       console.error("Error loading settings:", e);
@@ -128,6 +134,11 @@
       },
       persian: {
         bidi_mode: cfgBidi.value,
+      },
+      ocr: {
+        enabled: cfgOcrEnabled.checked,
+        engine: cfgOcrEngine.value,
+        use_gpu: cfgOcrMode.value === "gpu",
       },
       general: {
         overwrite_existing: cfgOverwrite.checked,
