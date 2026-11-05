@@ -1,0 +1,1 @@
+"""SubTrans Auto test suite."""
