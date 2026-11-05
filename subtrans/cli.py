@@ -14,6 +14,7 @@ from subtrans.core.pipeline import FileTask, Pipeline, Stage, StageStatus, natur
 from subtrans.core.probe import choose_best_subtitle_track, probe_subtitles
 from subtrans.core.store import TranslationStore
 from subtrans.core.translate import BatchTranslator
+from subtrans.web.server import run_server
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -199,7 +200,7 @@ def main(argv=None) -> int:
     elif args.command == "translate":
         return handle_translate(args)
     elif args.command == "web":
-        print(f"اجرای وب‌سرور روی http://{args.host}:{args.port} (در M4 پیاده‌سازی می‌شود)")
+        run_server(host=args.host, port=args.port, open_browser=True)
         return 0
 
     return 0

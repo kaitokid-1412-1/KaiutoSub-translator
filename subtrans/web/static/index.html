@@ -4,18 +4,198 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SubTrans Auto — مترجم خودکار زیرنویس</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div id="app">
-    <header>
-      <h1>SubTrans Auto</h1>
-      <p>مترجم خودکار و هوشمند زیرنویس فیلم و انیمه</p>
+  <div class="container">
+    <header class="app-header">
+      <div class="header-titles">
+        <h1>SubTrans Auto</h1>
+        <p class="subtitle">مترجم خودکار، هوشمند و دسته‌ای زیرنویس فیلم، سریال و انیمه</p>
+      </div>
+      <div class="header-status" id="connection-status">
+        <span class="status-indicator"></span>
+        <span id="gateway-status-text">در حال بررسی اتصال...</span>
+      </div>
     </header>
-    <main id="main-content">
-      <!-- Panels populated in M4 -->
-    </main>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs-nav">
+      <button class="tab-btn active" data-tab="tab-process">عملیات و صف ترجمه</button>
+      <button class="tab-btn" data-tab="tab-settings">تنظیمات هوش مصنوعی</button>
+      <button class="tab-btn" data-tab="tab-logs">لاگ‌ها و گزارش کار</button>
+    </nav>
+
+    <!-- TAB 1: PROCESSING & QUEUE -->
+    <section id="tab-process" class="tab-content active">
+      <!-- Input Card -->
+      <div class="card">
+        <h3>۱. انتخاب مسیر ورودی</h3>
+        <div class="input-group">
+          <input type="text" id="input-path" placeholder="مسیر پوشه حاوی ویدیوها یا فایل زیرنویس را وارد کنید...">
+          <button id="btn-browse" class="btn btn-secondary">انتخاب پوشه...</button>
+          <button id="btn-scan" class="btn btn-primary">اسکن فایل‌ها</button>
+        </div>
+        <div id="scan-summary" class="scan-summary hidden">
+          <p id="scan-count-text"></p>
+          <div class="table-responsive">
+            <table class="data-table" id="scanned-files-table">
+              <thead>
+                <tr>
+                  <th>نام فایل</th>
+                  <th>نوع</th>
+                  <th>ترک‌های زیرنویس شناسایی‌شده</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action & Estimate Card -->
+      <div class="card">
+        <div class="action-bar">
+          <div class="action-buttons">
+            <button id="btn-start" class="btn btn-success">شروع ترجمه (Start)</button>
+            <button id="btn-pause" class="btn btn-warning" disabled>توقف موقت (Pause)</button>
+            <button id="btn-resume" class="btn btn-info" disabled>ادامه کار (Resume)</button>
+            <button id="btn-estimate" class="btn btn-secondary">تخمین هزینه و خطوط (Dry Run)</button>
+          </div>
+          <div id="job-status-pill" class="badge badge-idle">وضعیت: آماده به کار</div>
+        </div>
+        <div id="estimate-result" class="estimate-box hidden"></div>
+
+        <!-- Global Progress Bar -->
+        <div class="progress-section">
+          <div class="progress-bar-container">
+            <div id="global-progress-bar" class="progress-bar" style="width: 0%;"></div>
+          </div>
+          <div class="progress-meta">
+            <span id="progress-percent">۰٪</span>
+            <span id="progress-detail">در انتظار شروع...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Queue Table Card -->
+      <div class="card">
+        <h3>صف فایل‌ها و وضعیت مراحل</h3>
+        <div class="table-responsive">
+          <table class="data-table" id="queue-table">
+            <thead>
+              <tr>
+                <th>نام فایل</th>
+                <th>استخراج (Extract)</th>
+                <th>OCR</th>
+                <th>ترجمه (Translate)</th>
+                <th>کنترل کیفیت (QC)</th>
+                <th>ذخیره نهایی (Write)</th>
+                <th>آخرین وضعیت</th>
+              </tr>
+            </thead>
+            <tbody id="queue-tbody">
+              <tr>
+                <td colspan="7" class="text-center text-muted">هنوز فایلی اسکن یا اضافه نشده است.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: SETTINGS -->
+    <section id="tab-settings" class="tab-content">
+      <div class="card">
+        <h3>تنظیمات ارائه‌دهنده هوش مصنوعی (LLM Provider)</h3>
+        <form id="settings-form">
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="cfg-base-url">آدرس سرور (Base URL):</label>
+              <input type="text" id="cfg-base-url" placeholder="http://127.0.0.1:20128/v1">
+              <small class="form-hint">برای 9Router پیش‌فرض http://127.0.0.1:20128/v1 است.</small>
+            </div>
+            <div class="form-group col-6">
+              <label for="cfg-api-key">کلید API (API Key):</label>
+              <input type="password" id="cfg-api-key" placeholder="کلید محرمانه API...">
+              <small class="form-hint">در صورت عدم نیاز توسط گیت‌وی محلی خالی بگذارید.</small>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="cfg-model">نام مدل انتخابی:</label>
+              <div class="input-with-button">
+                <input type="text" id="cfg-model" placeholder="نام مدل مثلاً gemini-2.5-flash یا deepseek-chat">
+                <button type="button" id="btn-fetch-models" class="btn btn-secondary">دریافت مدل‌ها</button>
+              </div>
+              <select id="cfg-model-select" class="hidden"></select>
+            </div>
+            <div class="form-group col-6">
+              <label>&nbsp;</label>
+              <button type="button" id="btn-test-conn" class="btn btn-info w-100">تست اتصال به سرور</button>
+            </div>
+          </div>
+
+          <hr class="divider">
+
+          <h3>تنظیمات ترجمه و فرمت فارسی</h3>
+          <div class="form-row">
+            <div class="form-group col-4">
+              <label for="cfg-tone">لحن ترجمه:</label>
+              <select id="cfg-tone">
+                <option value="movie_tv">فیلم و سریال (روان و استاندارد)</option>
+                <option value="anime">انیمه و انیمیشن (احساسی و پرانرژی)</option>
+                <option value="documentary">مستند و گزارش (علمی و رسمی)</option>
+                <option value="formal">کاملاً رسمی و فاخر</option>
+                <option value="colloquial">بسیار عامیانه و صمیمانه</option>
+              </select>
+            </div>
+            <div class="form-group col-4">
+              <label for="cfg-bidi">حالت راست‌به‌چپ (BiDi):</label>
+              <select id="cfg-bidi">
+                <option value="rle">RLE (بهترین حالت در بیشتر پلیرها و TV)</option>
+                <option value="rlm">RLM (نشانگر جهت)</option>
+                <option value="none">بدون نشانگر</option>
+              </select>
+            </div>
+            <div class="form-group col-4">
+              <label for="cfg-batch-lines">تعداد خطوط در هر درخواست:</label>
+              <input type="number" id="cfg-batch-lines" value="30" min="5" max="100">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-12">
+              <label class="checkbox-label">
+                <input type="checkbox" id="cfg-overwrite">
+                بازنویسی خودکار فایل‌های ترجمه شده از قبل (Overwrite)
+              </label>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-success">ذخیره تنظیمات</button>
+            <span id="save-settings-msg" class="text-success hidden">تنظیمات با موفقیت ذخیره شد.</span>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB 3: LOGS -->
+    <section id="tab-logs" class="tab-content">
+      <div class="card">
+        <div class="card-header-actions">
+          <h3>کنسول لاگ‌ها و وضعیت سیستم</h3>
+          <button id="btn-clear-logs" class="btn btn-sm btn-secondary">پاک‌سازی لاگ‌ها</button>
+        </div>
+        <div id="log-console" class="log-console">
+          <div class="log-line text-muted">در انتظار رخداد جدید...</div>
+        </div>
+      </div>
+    </section>
   </div>
-  <script src="app.js"></script>
+
+  <script src="/static/app.js"></script>
 </body>
 </html>

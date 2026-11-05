@@ -1,6 +1,6 @@
 # PROGRESS
 
-Current milestone: M3 (Video Pipeline & Subtitle Extraction)
+Current milestone: M4 (Local Persian Web UI)
 
 ## Done:
 - **2026-11-05:** Project initialization and directory layout scaffolding matching SPEC section 3.
@@ -25,11 +25,14 @@ Current milestone: M3 (Video Pipeline & Subtitle Extraction)
 - **2026-11-05:** Pipeline orchestrator implemented in `subtrans/core/pipeline.py` (recursive input discovery, natural episode sorting, skipping existing `.fa.*` subtitles, non-blocking queue processing with per-stage events).
 - **2026-11-05:** CLI commands `python -m subtrans run` and `python -m subtrans extract` implemented with Persian progress display.
 - **2026-11-05:** Pipeline and extraction tests in `tests/test_pipeline.py` passing; global test suite expanded to 39/39 passing tests.
+- **2026-11-05:** Web server implemented in `subtrans/web/server.py` with Host/Origin validation, token authentication (header/cookie/query), masked API keys, free port detection, and SSE progress streaming.
+- **2026-11-05:** Persian RTL UI implemented in `static/index.html`, `static/style.css`, and `static/app.js` (Folder picker subprocess, model fetch & test, dry-run estimate, queue table with stage pills, live log console).
+- **2026-11-05:** Web security and API tests implemented in `tests/test_web.py`; all 47/47 tests passing.
 
 ## Next 3 steps:
-1. Milestone M4: Implement local Persian RTL Web UI server in `subtrans/web/server.py` with token authentication, Host/Origin validation, and offline security.
-2. Milestone M4: Implement web UI frontend panels in `static/index.html`, `static/style.css`, and `static/app.js` (Folder picker, settings, live queue table, logs, estimate).
-3. Milestone M4: Implement real-time SSE progress streaming and connect `START.bat` launcher.
+1. Milestone M5: Integrate `guessit` for series title, season, and episode metadata extraction from filenames.
+2. Milestone M5: Implement series context caching and LLM prompt enrichment (`context.py`).
+3. Milestone M5: Implement user-editable `glossary.json` and tone preset management (`glossary.py`).
 
 ## How to run tests:
 ```bash
@@ -44,6 +47,7 @@ python -m pytest tests/ -v
 - Set ASS style `Encoding=178` (Arabic script) and default font to `Tahoma` during Persian subtitle generation.
 - QC pass excludes non-translatable lines (music/numbers, drawings, comments) and ASS escape sequences from Latin residue checks.
 - Subtitle extraction automatically infers target extension (`.fa.ass` or `.fa.srt`) from the extracted subtitle stream rather than the video container format.
+- Run folder picker dialog via `tkinter` in an isolated child process to never block the async event loop of the web server.
 
 ## Known issues / untested on Windows:
 - SubtitleEdit CLI switches for PGS/VobSub OCR need verification against current SubtitleEdit releases before M6.
