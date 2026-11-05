@@ -1,6 +1,6 @@
 # PROGRESS
 
-Current milestone: M1 (Core Subtitle Translation)
+Current milestone: M2 (Reliability and Persian Quality)
 
 ## Done:
 - **2026-11-05:** Project initialization and directory layout scaffolding matching SPEC section 3.
@@ -17,12 +17,15 @@ Current milestone: M1 (Core Subtitle Translation)
 - **2026-11-05:** Safe subtitle output writer implemented in `subtrans/core/writeout.py` (atomic temporary file replacement, automatic UTF-8 BOM for SRT, backup handling).
 - **2026-11-05:** Batch translation engine implemented in `subtrans/core/translate.py` (rolling context, batch splitting/halving fallback, JSON repair, in-file deduplication, tone presets).
 - **2026-11-05:** CLI command `python -m subtrans translate` wired and tested.
-- **2026-11-05:** Complete M1 test suite in `tests/test_parse.py`, `tests/test_protect.py`, `tests/test_store.py`, and `tests/test_translate.py` passing 23/23 tests.
+- **2026-11-05:** Persian post-processing engine implemented in `subtrans/core/persian.py` (letter normalization ك/ي, Persian digits conversion while preserving tag brackets, punctuation/ellipsis spacing, regex-based ZWNJ rules, BiDi formatting with none/rlm/rle modes, line re-wrapping at 42 chars, and ASS font/encoding=178 styling).
+- **2026-11-05:** Quality Control (QC) module implemented in `subtrans/core/qc.py` (suspicious Latin remnant detection, automatic re-translation of flagged lines with stricter prompt, JSON/Persian text report generation).
+- **2026-11-05:** Generated `bidi_test.srt` at repository root for player and TV display validation.
+- **2026-11-05:** Test suite expanded with `tests/test_persian.py` and `tests/test_qc.py`; all 33 unit and integration tests passing.
 
 ## Next 3 steps:
-1. Milestone M2: Implement Persian text post-processing in `subtrans/core/persian.py` (character normalisation, Persian digits, punctuation spacing, ZWNJ rules, BiDi modes rle/rlm/none, text wrapping).
-2. Milestone M2: Implement Quality Control (QC pass) in `subtrans/core/qc.py` to catch untranslated Latin remnants and generate JSON/text reports.
-3. Milestone M2: Generate `bidi_test.srt` for player/smart TV compatibility verification.
+1. Milestone M3: Implement media probing (`probe.py`) via `ffprobe` to inspect subtitle streams and audio/video codecs.
+2. Milestone M3: Implement subtitle extraction (`extract.py`) for text and bitmap tracks with language prioritization and Persian skip rules.
+3. Milestone M3: Implement recursive folder scanning, natural episode sorting, output path resolution, and CLI command `python -m subtrans run`.
 
 ## How to run tests:
 ```bash
@@ -34,6 +37,8 @@ python -m pytest tests/ -v
 - Local connections (127.0.0.1 / localhost) in HTTP clients set `trust_env=False` to prevent system V2Ray/tun proxies from intercepting local LLM gateway traffic.
 - Preserved Git repository with `main` as the default branch.
 - Added heuristic in `parse.py` to prioritize `cp1256` when Arabic/Persian script is present over 0-coherence CJK false positives from `charset-normalizer`.
+- Set ASS style `Encoding=178` (Arabic script) and default font to `Tahoma` during Persian subtitle generation.
+- QC pass excludes non-translatable lines (music/numbers, drawings, comments) and ASS escape sequences from Latin residue checks.
 
 ## Known issues / untested on Windows:
 - SubtitleEdit CLI switches for PGS/VobSub OCR need verification against current SubtitleEdit releases before M6.
@@ -42,3 +47,4 @@ python -m pytest tests/ -v
 - 9Router at `127.0.0.1:20128/v1` can return SSE `data:` streams even when `stream: false` is requested; response handler must detect `data:` prefix and assemble delta contents seamlessly.
 - Windows batch scripts must use `chcp 65001` for proper UTF-8 Persian character rendering.
 - `pysubs2` standardizes SRT inline formatting (`<i>`, `<b>`) into SSA override tags `{\i1}` upon loading and converts them back on export.
+- Standard ASS `Encoding` attribute value for Arabic/Persian script is `178`.

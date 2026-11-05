@@ -16,6 +16,7 @@ Supports modes specified in SPEC section 10:
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, Header, HTTPException, Request, Response
@@ -85,10 +86,15 @@ def create_mock_llm_app(config: Optional[MockLLMConfig] = None) -> FastAPI:
         # Extract source lines from payload if provided
         # Standard expected payload structure in system/user message:
         # lines: [{"id": 1, "text": "Hello"}]
+        input_lines = []
         try:
-            # Look for lines list in JSON if sent directly
-            payload_data = json.loads(last_msg) if isinstance(last_msg, str) and last_msg.strip().startswith("{") else {}
-            input_lines = payload_data.get("lines", [])
+            m = re.search(r'\{"lines":\s*\[.*?\]\}', last_msg, re.DOTALL)
+            if m:
+                payload_data = json.loads(m.group(0))
+                input_lines = payload_data.get("lines", [])
+            elif last_msg.strip().startswith("{"):
+                payload_data = json.loads(last_msg)
+                input_lines = payload_data.get("lines", [])
         except Exception:
             input_lines = []
 
@@ -96,10 +102,11 @@ def create_mock_llm_app(config: Optional[MockLLMConfig] = None) -> FastAPI:
         for line in input_lines:
             lid = line.get("id", 1)
             text = line.get("text", "")
-            # Simple mock translation
+            tokens = re.findall(r"\[\[T\d+\]\]", text)
+            token_prefix = "".join(tokens) + " " if tokens else ""
             translated_lines.append({
                 "id": lid,
-                "translated_text": f"ترجمه: {text}",
+                "translated_text": f"سلام و درود {token_prefix}متن خط شماره {lid} به فارسی",
             })
 
         if not translated_lines:

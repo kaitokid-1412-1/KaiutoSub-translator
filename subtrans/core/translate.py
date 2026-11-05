@@ -17,7 +17,9 @@ from subtrans.core.parse import (
     classify_subtitles,
     load_subtitle,
 )
+from subtrans.core.persian import PersianNormalizer, update_ass_styles_for_persian
 from subtrans.core.protect import ProtectedLine, TagProtector
+from subtrans.core.qc import QualityChecker, QCReport
 from subtrans.core.store import TranslationStore, compute_text_hash
 from subtrans.core.writeout import get_output_path, write_subtitle_file
 
@@ -98,6 +100,7 @@ class BatchTranslator:
         self.cfg = config
         self.llm = llm_client or LLMClient(config.provider)
         self.protector = TagProtector()
+        self.normalizer = PersianNormalizer(config.persian)
         self.store = store
 
     def _build_system_prompt(
@@ -354,7 +357,10 @@ class BatchTranslator:
                 trans_payload = results_map.get(item.payload_id, item.protected.payload)
                 in_file_cache[item.protected.payload] = trans_payload
 
-                restored_text, is_valid = self.protector.restore(trans_payload, item.protected, is_ass=is_ass)
+                # Persian post-processing
+                norm_payload = self.normalizer.process(trans_payload, is_ass=False)
+
+                restored_text, is_valid = self.protector.restore(norm_payload, item.protected, is_ass=is_ass)
                 if not is_valid:
                     report.degraded_count += 1
                 else:
@@ -396,6 +402,64 @@ class BatchTranslator:
                 output_pattern=self.cfg.general.output_pattern,
                 target_lang=self.cfg.general.target_lang,
             )
+
+        # Update ASS styles for Persian
+        if is_ass:
+            update_ass_styles_for_persian(
+                subs,
+                font_name=self.cfg.persian.ass_font,
+                encoding=178,
+            )
+
+        # QC Pass (SPEC section 4.10)
+        if self.cfg.qc.enabled:
+            qc = QualityChecker()
+            translatable_set = {line.line_index for line in classified if line.status == LineStatus.TRANSLATABLE}
+            qc_rep, flagged_indices = qc.run_qc(
+                subs=subs,
+                file_id=file_id,
+                total_lines=report.total_lines,
+                translated_count=report.translated_count,
+                skipped_count=report.skipped_count,
+                degraded_count=report.degraded_count,
+                failed_count=report.failed_count,
+                api_calls=self.llm.call_count,
+                translatable_indices=translatable_set,
+            )
+            # Re-translate flagged lines once with stricter prompt if any
+            if flagged_indices:
+                retranslate_items = [
+                    BatchItem(
+                        line_index=idx,
+                        payload_id=i + 1,
+                        source_event_text=subs.events[idx].text,
+                        protected=self.protector.protect(subs.events[idx].text),
+                        src_hash=compute_text_hash(subs.events[idx].text),
+                    )
+                    for i, idx in enumerate(flagged_indices)
+                ]
+                strict_prompt = (
+                    "خطوط زیر به اشتباه ترجمه نشده یا انگلیسی مانده‌اند.\n"
+                    "آنها را حتماً و بدون استثنا به فارسی روان ترجمه کنید.\n"
+                    + system_prompt
+                )
+                try:
+                    retrans_res = self._translate_batch_with_retry(
+                        retranslate_items,
+                        strict_prompt,
+                        [],
+                        [],
+                    )
+                    for it in retranslate_items:
+                        if it.payload_id in retrans_res:
+                            new_p = self.normalizer.process(retrans_res[it.payload_id], is_ass=False)
+                            new_text, _ = self.protector.restore(new_p, it.protected, is_ass=is_ass)
+                            subs.events[it.line_index].text = new_text
+                except Exception:
+                    pass
+
+            # Save QC reports
+            qc_rep.save(output_path.parent)
 
         saved_path = write_subtitle_file(
             subs=subs,
