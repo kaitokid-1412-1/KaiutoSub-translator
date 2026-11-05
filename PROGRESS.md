@@ -1,6 +1,6 @@
 # PROGRESS
 
-Current milestone: M2 (Reliability and Persian Quality)
+Current milestone: M3 (Video Pipeline & Subtitle Extraction)
 
 ## Done:
 - **2026-11-05:** Project initialization and directory layout scaffolding matching SPEC section 3.
@@ -20,12 +20,16 @@ Current milestone: M2 (Reliability and Persian Quality)
 - **2026-11-05:** Persian post-processing engine implemented in `subtrans/core/persian.py` (letter normalization ك/ي, Persian digits conversion while preserving tag brackets, punctuation/ellipsis spacing, regex-based ZWNJ rules, BiDi formatting with none/rlm/rle modes, line re-wrapping at 42 chars, and ASS font/encoding=178 styling).
 - **2026-11-05:** Quality Control (QC) module implemented in `subtrans/core/qc.py` (suspicious Latin remnant detection, automatic re-translation of flagged lines with stricter prompt, JSON/Persian text report generation).
 - **2026-11-05:** Generated `bidi_test.srt` at repository root for player and TV display validation.
-- **2026-11-05:** Test suite expanded with `tests/test_persian.py` and `tests/test_qc.py`; all 33 unit and integration tests passing.
+- **2026-11-05:** Media probing implemented in `subtrans/core/probe.py` using `ffprobe` (JSON parsing, text vs bitmap classification, track prioritization with language preferences and sign/song depenalization).
+- **2026-11-05:** Subtitle extraction implemented in `subtrans/core/extract.py` using `ffmpeg` (stream copying, mov_text to srt conversion, external subtitle detection fallback, Persian skip checks).
+- **2026-11-05:** Pipeline orchestrator implemented in `subtrans/core/pipeline.py` (recursive input discovery, natural episode sorting, skipping existing `.fa.*` subtitles, non-blocking queue processing with per-stage events).
+- **2026-11-05:** CLI commands `python -m subtrans run` and `python -m subtrans extract` implemented with Persian progress display.
+- **2026-11-05:** Pipeline and extraction tests in `tests/test_pipeline.py` passing; global test suite expanded to 39/39 passing tests.
 
 ## Next 3 steps:
-1. Milestone M3: Implement media probing (`probe.py`) via `ffprobe` to inspect subtitle streams and audio/video codecs.
-2. Milestone M3: Implement subtitle extraction (`extract.py`) for text and bitmap tracks with language prioritization and Persian skip rules.
-3. Milestone M3: Implement recursive folder scanning, natural episode sorting, output path resolution, and CLI command `python -m subtrans run`.
+1. Milestone M4: Implement local Persian RTL Web UI server in `subtrans/web/server.py` with token authentication, Host/Origin validation, and offline security.
+2. Milestone M4: Implement web UI frontend panels in `static/index.html`, `static/style.css`, and `static/app.js` (Folder picker, settings, live queue table, logs, estimate).
+3. Milestone M4: Implement real-time SSE progress streaming and connect `START.bat` launcher.
 
 ## How to run tests:
 ```bash
@@ -39,6 +43,7 @@ python -m pytest tests/ -v
 - Added heuristic in `parse.py` to prioritize `cp1256` when Arabic/Persian script is present over 0-coherence CJK false positives from `charset-normalizer`.
 - Set ASS style `Encoding=178` (Arabic script) and default font to `Tahoma` during Persian subtitle generation.
 - QC pass excludes non-translatable lines (music/numbers, drawings, comments) and ASS escape sequences from Latin residue checks.
+- Subtitle extraction automatically infers target extension (`.fa.ass` or `.fa.srt`) from the extracted subtitle stream rather than the video container format.
 
 ## Known issues / untested on Windows:
 - SubtitleEdit CLI switches for PGS/VobSub OCR need verification against current SubtitleEdit releases before M6.

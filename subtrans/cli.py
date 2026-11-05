@@ -5,9 +5,13 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import List
 
 from subtrans.core.config import Config, get_user_data_dir, load_config
 from subtrans.core.doctor import format_diagnostics_persian, run_diagnostics
+from subtrans.core.extract import extract_subtitle_track
+from subtrans.core.pipeline import FileTask, Pipeline, Stage, StageStatus, natural_sort_key
+from subtrans.core.probe import choose_best_subtitle_track, probe_subtitles
 from subtrans.core.store import TranslationStore
 from subtrans.core.translate import BatchTranslator
 
@@ -99,6 +103,85 @@ def handle_translate(args: argparse.Namespace) -> int:
         return 1
 
 
+def handle_run(args: argparse.Namespace) -> int:
+    target_path = Path(args.path)
+    if not target_path.exists():
+        print(f"[خطا] مسیر مورد نظر پیدا نشد: {target_path}")
+        return 1
+
+    cfg = load_config()
+    if args.overwrite:
+        cfg.general.overwrite_existing = True
+
+    job_id = args.resume or f"run_{target_path.stem}"
+    pipeline = Pipeline(config=cfg)
+
+    print(f"=== اجرای پایپ‌لاین روی: {target_path} ===")
+    if args.dry_run:
+        print("[حالت محاسبه آزمایشی - بدون کسر سهمیه]")
+
+    def on_event(task: FileTask, stage: Stage, status: StageStatus, msg: str):
+        icon = "✔" if status == StageStatus.SUCCESS else ("✘" if status == StageStatus.FAILED else ("⟳" if status == StageStatus.RUNNING else "⏭"))
+        print(f"[{icon}] {task.path.name} | مرحله {stage.value}: {msg}")
+
+    tasks = pipeline.run(
+        input_path=target_path,
+        dry_run=args.dry_run,
+        job_id=job_id,
+        on_event=on_event,
+    )
+
+    print("--------------------------------------------------")
+    print(f"پردازش تمام شد. مجموع فایل‌های بررسی شده: {len(tasks)}")
+    success_count = sum(1 for t in tasks if t.stages.get(Stage.WRITE.value) == StageStatus.SUCCESS or t.stages.get(Stage.TRANSLATE.value) == StageStatus.SUCCESS)
+    skipped_count = sum(1 for t in tasks if any(st == StageStatus.SKIPPED for st in t.stages.values()) and not t.output_path)
+    failed_count = sum(1 for t in tasks if any(st == StageStatus.FAILED for st in t.stages.values()))
+
+    print(f"موفق: {success_count} | رد شده: {skipped_count} | خطا: {failed_count}")
+    return 0 if failed_count == 0 else 1
+
+
+def handle_extract(args: argparse.Namespace) -> int:
+    target_path = Path(args.path)
+    if not target_path.exists():
+        print(f"[خطا] مسیر پیدا نشد: {target_path}")
+        return 1
+
+    files_to_probe: List[Path] = []
+    if target_path.is_file():
+        files_to_probe = [target_path]
+    else:
+        for f in target_path.iterdir():
+            if f.is_file() and f.suffix.lower() in (".mkv", ".mp4"):
+                files_to_probe.append(f)
+        files_to_probe.sort(key=natural_sort_key)
+
+    cfg = load_config()
+    extracted_any = False
+
+    for vid in files_to_probe:
+        print(f"بررسی ویدیو: {vid.name}")
+        tracks = probe_subtitles(vid)
+        if not tracks:
+            print(f"  [✘] هیچ ترک زیرنویسی در {vid.name} پیدا نشد.")
+            continue
+
+        best = choose_best_subtitle_track(tracks, preferred_languages=cfg.extraction.source_languages)
+        if not best:
+            print("  [✘] هیچ ترک مناسبی انتخاب نشد.")
+            continue
+
+        print(f"  [✔] انتخاب ترک {best.index} (زبان: {best.language}, کدک: {best.codec_name}, عنوان: {best.title or 'ندارد'})")
+        try:
+            out_path = extract_subtitle_track(vid, best)
+            print(f"  -> استخراج شد در: {out_path.name}")
+            extracted_any = True
+        except Exception as e:
+            print(f"  [خطا در استخراج] {e}")
+
+    return 0 if extracted_any else 1
+
+
 def main(argv=None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -110,11 +193,9 @@ def main(argv=None) -> int:
     if args.command == "doctor":
         return handle_doctor(args)
     elif args.command == "run":
-        print(f"اجرای پایپ‌لاین روی مسیر: {args.path} (در مایل‌استون‌های بعدی تکمیل می‌شود)")
-        return 0
+        return handle_run(args)
     elif args.command == "extract":
-        print(f"استخراج زیرنویس از مسیر: {args.path} (در M3 پیاده‌سازی می‌شود)")
-        return 0
+        return handle_extract(args)
     elif args.command == "translate":
         return handle_translate(args)
     elif args.command == "web":
