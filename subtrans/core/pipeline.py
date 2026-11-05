@@ -17,6 +17,8 @@ from subtrans.core.extract import (
     is_subtitle_already_persian,
 )
 from subtrans.core.glossary import GlossaryManager
+from subtrans.core.llm import QuotaExhaustedError
+from subtrans.core.ocr import OcrTimeoutError, ocr_bitmap_subtitle
 from subtrans.core.probe import choose_best_subtitle_track, probe_subtitles
 from subtrans.core.store import TranslationStore
 from subtrans.core.translate import BatchTranslator
@@ -187,15 +189,47 @@ class Pipeline:
 
                     if best_track:
                         if best_track.is_bitmap:
-                            emit(Stage.OCR, StageStatus.SKIPPED, "زیرنویس تصویری است (OCR در M6)")
-                            emit(Stage.EXTRACT, StageStatus.SKIPPED, "ترک تصویری رد شد")
-                            continue
-                        # Text track: extract
-                        extracted = extract_subtitle_track(task.path, best_track)
-                        task.extracted_subtitle_path = extracted
-                        sub_to_translate = extracted
-                        temp_extracted = True
-                        emit(Stage.EXTRACT, StageStatus.SUCCESS, f"ترک {best_track.index} ({best_track.codec_name}) استخراج شد")
+                            if not self.cfg.ocr.enabled:
+                                emit(Stage.OCR, StageStatus.SKIPPED, "OCR غیرفعال است")
+                                emit(Stage.EXTRACT, StageStatus.SKIPPED, "ترک تصویری نادیده گرفته شد")
+                                continue
+
+                            # Extract bitmap stream first (.sup / .sub)
+                            emit(Stage.EXTRACT, StageStatus.RUNNING, f"استخراج ترک تصویری {best_track.index}...")
+                            extracted_bitmap = extract_subtitle_track(task.path, best_track)
+                            temp_extracted = True
+                            emit(Stage.EXTRACT, StageStatus.SUCCESS, f"ترک تصویری استخراج شد: {extracted_bitmap.name}")
+
+                            # Perform OCR
+                            emit(Stage.OCR, StageStatus.RUNNING, "تبدیل زیرنویس تصویری به متن با OCR...")
+                            try:
+                                ocr_result = ocr_bitmap_subtitle(
+                                    input_path=extracted_bitmap,
+                                    timeout_seconds=self.cfg.ocr.timeout_seconds,
+                                    subtitleedit_path=self.cfg.ocr.subtitleedit_path,
+                                )
+                                if ocr_result and ocr_result.exists():
+                                    sub_to_translate = ocr_result
+                                    emit(Stage.OCR, StageStatus.SUCCESS, "OCR با موفقیت انجام شد")
+                                else:
+                                    emit(Stage.OCR, StageStatus.FAILED, "OCR خروجی متنی تولید نکرد")
+                                    continue
+                            except OcrTimeoutError:
+                                emit(Stage.OCR, StageStatus.FAILED, "زمان OCR به پایان رسید (Timeout) و رد شد")
+                                continue
+                            except FileNotFoundError as fnf_err:
+                                emit(Stage.OCR, StageStatus.SKIPPED, str(fnf_err))
+                                continue
+                            except Exception as ocr_err:
+                                emit(Stage.OCR, StageStatus.FAILED, f"خطا در OCR: {ocr_err}")
+                                continue
+                        else:
+                            # Text track: extract
+                            extracted = extract_subtitle_track(task.path, best_track)
+                            task.extracted_subtitle_path = extracted
+                            sub_to_translate = extracted
+                            temp_extracted = True
+                            emit(Stage.EXTRACT, StageStatus.SUCCESS, f"ترک {best_track.index} ({best_track.codec_name}) استخراج شد")
                     else:
                         # Check external subtitle
                         external = find_external_subtitle(task.path)
@@ -262,6 +296,11 @@ class Pipeline:
                 emit(Stage.TRANSLATE, StageStatus.SUCCESS, f"ترجمه موفق ({rep.translated_count} خط)")
                 emit(Stage.QC, StageStatus.SUCCESS, f"QC پاس شد ({rep.qc_fixed_count} خط بازنویسی شد)")
                 emit(Stage.WRITE, StageStatus.SUCCESS, f"ذخیره شد: {saved_path.name}")
+            except QuotaExhaustedError as qe:
+                # Quota pause rule (SPEC section 4.8 & 8)
+                emit(Stage.TRANSLATE, StageStatus.FAILED, f"سهمیه یا محدودیت سرعت؛ پیشرفت ذخیره شد: {qe}")
+                task.error = "PAUSED_QUOTA"
+                break
             except Exception as e:
                 emit(Stage.TRANSLATE, StageStatus.FAILED, f"خطا در ترجمه: {e}")
                 task.error = str(e)

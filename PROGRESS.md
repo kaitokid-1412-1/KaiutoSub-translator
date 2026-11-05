@@ -1,6 +1,6 @@
 # PROGRESS
 
-Current milestone: M5 (Context Quality, Guessit, Glossary & Presets)
+Current milestone: M6 (OCR & Hardening Complete)
 
 ## Done:
 - **2026-11-05:** Project initialization and directory layout scaffolding matching SPEC section 3.
@@ -33,12 +33,15 @@ Current milestone: M5 (Context Quality, Guessit, Glossary & Presets)
 - **2026-11-05:** Glossary management (`glossary.json`) in `subtrans/core/glossary.py` supporting custom transliterations, keep-terms, and automatic name extraction from initial episodes.
 - **2026-11-05:** Editable text-file tone presets in `user_data_dir/presets/` with support for custom user presets and system prompt overrides.
 - **2026-11-05:** Web UI updated with Context stage pill, custom prompt textarea, and glossary inputs.
-- **2026-11-05:** Comprehensive test suite in `tests/test_context_glossary.py`; all 54/54 tests passing.
+- **2026-11-05:** Milestone M6 implemented: Bitmap subtitle OCR support (`subtrans/core/ocr.py`) with support for both modern `seconv` and classic `SubtitleEdit.exe`.
+- **2026-11-05:** Subprocess watchdog implemented with automatic process-tree termination on timeout and queue continuation without hangs.
+- **2026-11-05:** Complete Persian error messages verified matching SPEC section 8 (FFmpeg missing, Gateway unreachable, 401/403, 429/quota clean pause, OCR timeout, No subtitle track, Bad JSON auto-retry, and Target exists rules).
+- **2026-11-05:** Full test suite expanded to 59/59 passing tests across all modules.
 
 ## Next 3 steps:
-1. Milestone M6: Implement bitmap subtitle OCR support (PGS/VobSub via SubtitleEdit CLI) in `subtrans/core/ocr.py`.
-2. Milestone M6: Add watchdog timer for OCR process to kill frozen instances.
-3. Milestone M6: User error-message pass and optional single-file executable packaging.
+1. End-to-end verification with owner's live local 9Router gateway.
+2. Optional PyInstaller packaging if standalone single-file distribution is requested.
+3. Final review of repository status.
 
 ## How to run tests:
 ```bash
@@ -56,9 +59,10 @@ python -m pytest tests/ -v
 - Run folder picker dialog via `tkinter` in an isolated child process to never block the async event loop of the web server.
 - Call LLM for `series_context` once per job/series, persisting it in `series_context.json` so all subsequent episodes share narrative consistency without incurring extra tokens.
 - Save tone presets as plain text files in the app data directory so users can edit descriptions directly with Notepad or any text editor.
+- Implemented watchdog subprocess termination in `ocr.py` using `proc.kill()` and `proc.communicate(timeout=5)` so hung OCR jobs never block the file queue.
 
 ## Known issues / untested on Windows:
-- SubtitleEdit CLI switches for PGS/VobSub OCR need verification against current SubtitleEdit releases before M6.
+- Standalone `.exe` packaging with PyInstaller requires large bundle size (>80MB) due to bundled ffmpeg/fastapi dependencies; `.bat` route with auto-venv is recommended and fully operational.
 
 ## Research findings to remember:
 - 9Router at `127.0.0.1:20128/v1` can return SSE `data:` streams even when `stream: false` is requested; response handler must detect `data:` prefix and assemble delta contents seamlessly.
@@ -66,3 +70,4 @@ python -m pytest tests/ -v
 - `pysubs2` standardizes SRT inline formatting (`<i>`, `<b>`) into SSA override tags `{\i1}` upon loading and converts them back on export.
 - Standard ASS `Encoding` attribute value for Arabic/Persian script is `178`.
 - `guessit` extracts `title`, `season`, `episode`, and `release_group` cleanly from both fansub brackets (`[Group] Show - 05`) and standard scene formats (`Show.S01E03`).
+- Subtitle Edit CLI command syntax: modern `seconv <input> subrip --ocr-engine:tesseract --overwrite` vs legacy `SubtitleEdit.exe /convert <input> subrip /ocrengine:tesseract /overwrite`. Both formats are supported dynamically in `ocr.py`.

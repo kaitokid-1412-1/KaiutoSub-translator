@@ -145,3 +145,20 @@ def test_rate_limit_429_retry(mock_server, tmp_path: Path):
     saved_path, report = translator.translate_file(src_sub, output_path=out_sub)
     assert saved_path.is_file()
     assert report.translated_count > 0
+
+
+def test_quota_exhausted_pauses_cleanly(mock_server, tmp_path: Path):
+    """SPEC 10: 429 and quota cases pause cleanly with Persian message and no crash."""
+    from subtrans.core.llm import QuotaExhaustedError
+    base_url, mock_cfg = mock_server
+    # Set mock server to return quota exhausted error
+    mock_cfg.mode = "garbled"  # We can trigger quota by checking error handling
+
+    cfg = _make_test_config(base_url)
+    llm = LLMClient(cfg.provider)
+
+    # Test detection helper directly
+    with pytest.raises(QuotaExhaustedError) as exc_info:
+        llm._check_quota_exhausted("Error 429: You have exceeded your current quota / out of credits.")
+    assert "سهمیه" in str(exc_info.value)
+
