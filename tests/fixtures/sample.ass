@@ -1,0 +1,23 @@
+[Script Info]
+Title: Test Anime Episode
+ScriptType: v4.00+
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,55,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,30,30,30,1
+Style: Sign,Arial,45,&H00FFFF00,&H000000FF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,1,2,2,8,10,10,10,1
+Style: OP_Song,Arial,40,&H00FF00FF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\an8}{\pos(960,100)}Look at {\i1}this{\i0}!\NIt's amazing!
+Dialogue: 0,0:00:03.50,0:00:05.00,Sign,,0,0,0,,Tokyo High School
+Dialogue: 0,0:00:05.50,0:00:07.00,OP_Song,,0,0,0,,Opening Song Lyrics
+Dialogue: 0,0:00:07.50,0:00:09.00,Default,,0,0,0,,{\k50}Ka{\k50}ra{\k50}o{\k50}ke
+Dialogue: 0,0:00:09.50,0:00:11.00,Default,,0,0,0,,{\p1}m 0 0 l 100 0 100 100 0 100{\p0}
+Comment: 0,0:00:11.50,0:00:13.00,Default,,0,0,0,,This is a comment line
+Dialogue: 0,0:00:13.50,0:00:15.50,Default,,0,0,0,,Good morning, Sensei!
