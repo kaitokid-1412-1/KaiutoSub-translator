@@ -88,6 +88,7 @@
                 <th>نام فایل</th>
                 <th>استخراج (Extract)</th>
                 <th>OCR</th>
+                <th>کانتکست (Context)</th>
                 <th>ترجمه (Translate)</th>
                 <th>کنترل کیفیت (QC)</th>
                 <th>ذخیره نهایی (Write)</th>
@@ -96,7 +97,7 @@
             </thead>
             <tbody id="queue-tbody">
               <tr>
-                <td colspan="7" class="text-center text-muted">هنوز فایلی اسکن یا اضافه نشده است.</td>
+                <td colspan="8" class="text-center text-muted">هنوز فایلی اسکن یا اضافه نشده است.</td>
               </tr>
             </tbody>
           </table>
@@ -162,6 +163,28 @@
             <div class="form-group col-4">
               <label for="cfg-batch-lines">تعداد خطوط در هر درخواست:</label>
               <input type="number" id="cfg-batch-lines" value="30" min="5" max="100">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-12">
+              <label for="cfg-custom-prompt">دستورالعمل سفارشی یا پرامپت اضافی (Custom Prompt):</label>
+              <textarea id="cfg-custom-prompt" rows="2" placeholder="مثلاً: تمام اسامی افسران با درجه نظامی به فارسی برگردانده شود یا..."></textarea>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="cfg-glossary-terms">واژه‌نامه و اسامی خاص (فرمت JSON یا هر سطر Name: ترجمه):</label>
+              <textarea id="cfg-glossary-terms" rows="4" placeholder='Walter: والتر&#10;Jesse: جسی&#10;Albuquerque: آلبوکرکی'></textarea>
+            </div>
+            <div class="form-group col-6">
+              <label for="cfg-glossary-keep">کلمات بدون تغییر (انگلیسی بمانند - با ویرگول جدا کنید):</label>
+              <input type="text" id="cfg-glossary-keep" placeholder="FBI, CIA, DEA, iPhone, NASA">
+              <div style="margin-top: 10px;">
+                <label for="cfg-series-synopsis">خلاصه داستان / یادداشت دستی اثر (اختیاری):</label>
+                <input type="text" id="cfg-series-synopsis" placeholder="خلاصه کوتاه برای هدایت مدل در انتخاب ضمایر و افعال...">
+              </div>
             </div>
           </div>
 

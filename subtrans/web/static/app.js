@@ -73,6 +73,10 @@
   const cfgBidi = document.getElementById("cfg-bidi");
   const cfgBatchLines = document.getElementById("cfg-batch-lines");
   const cfgOverwrite = document.getElementById("cfg-overwrite");
+  const cfgCustomPrompt = document.getElementById("cfg-custom-prompt");
+  const cfgGlossaryTerms = document.getElementById("cfg-glossary-terms");
+  const cfgGlossaryKeep = document.getElementById("cfg-glossary-keep");
+  const cfgSeriesSynopsis = document.getElementById("cfg-series-synopsis");
   const settingsForm = document.getElementById("settings-form");
   const saveSettingsMsg = document.getElementById("save-settings-msg");
 
@@ -102,6 +106,7 @@
         cfgBidi.value = data.persian?.bidi_mode || "rle";
         cfgBatchLines.value = data.translate?.batch_lines || 30;
         cfgOverwrite.checked = !!data.general?.overwrite_existing;
+        cfgCustomPrompt.value = data.translate?.custom_prompt || "";
       }
     } catch (e) {
       console.error("Error loading settings:", e);
@@ -119,6 +124,7 @@
       translate: {
         tone_preset: cfgTone.value,
         batch_lines: parseInt(cfgBatchLines.value, 10) || 30,
+        custom_prompt: cfgCustomPrompt.value.trim() || null,
       },
       persian: {
         bidi_mode: cfgBidi.value,
@@ -354,6 +360,7 @@
         <td><strong>${t.name}</strong></td>
         <td>${makePill(t.stages?.extract)}</td>
         <td>${makePill(t.stages?.ocr)}</td>
+        <td>${makePill(t.stages?.context)}</td>
         <td>${makePill(t.stages?.translate)}</td>
         <td>${makePill(t.stages?.qc)}</td>
         <td>${makePill(t.stages?.write)}</td>

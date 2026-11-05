@@ -23,13 +23,49 @@ from subtrans.core.qc import QualityChecker, QCReport
 from subtrans.core.store import TranslationStore, compute_text_hash
 from subtrans.core.writeout import get_output_path, write_subtitle_file
 
-TONE_PRESETS = {
+DEFAULT_TONE_PRESETS = {
     "movie_tv": "لحن طبیعی و روان متناسب با فیلم و سریال (محاوره‌ای خوش‌خوان و استاندارد).",
     "anime": "لحن متناسب با انیمه و انیمیشن (بیان احساسی، پویا و صمیمی).",
     "documentary": "لحن رسمی، دقیق و علمی متناسب با مستند و گزارش‌ها.",
     "formal": "کاملاً رسمی، کتابی، فاخر و بدون کلمات شکسته.",
     "colloquial": "بسیار عامیانه، صمیمانه و روزمره با افعال شکسته.",
 }
+TONE_PRESETS = dict(DEFAULT_TONE_PRESETS)
+
+
+def load_tone_presets(presets_dir: Optional[Path] = None) -> Dict[str, str]:
+    """Load editable text presets from disk or write defaults."""
+    presets = dict(DEFAULT_TONE_PRESETS)
+    if not presets_dir:
+        from platformdirs import user_data_dir
+        presets_dir = Path(user_data_dir("SubTransAuto")) / "presets"
+
+    try:
+        presets_dir.mkdir(parents=True, exist_ok=True)
+        # Ensure default preset files exist as editable text files
+        for key, text in DEFAULT_TONE_PRESETS.items():
+            preset_file = presets_dir / f"{key}.txt"
+            if not preset_file.exists():
+                with open(preset_file, "w", encoding="utf-8") as f:
+                    f.write(text.strip() + "\n")
+            else:
+                with open(preset_file, "r", encoding="utf-8") as f:
+                    content = f.read().strip()
+                    if content:
+                        presets[key] = content
+
+        # Also load any custom added preset files
+        for f in presets_dir.glob("*.txt"):
+            k = f.stem
+            if k not in presets:
+                with open(f, "r", encoding="utf-8") as pf:
+                    c = pf.read().strip()
+                    if c:
+                        presets[k] = c
+    except Exception:
+        pass
+
+    return presets
 
 
 def extract_json_from_text(raw_text: str) -> Dict[str, Any]:
@@ -85,6 +121,7 @@ class TranslationReport:
     cached_count: int = 0
     api_calls: int = 0
     total_tokens: int = 0
+    qc_fixed_count: int = 0
     details: List[Dict[str, Any]] = field(default_factory=list)
 
 
@@ -108,11 +145,17 @@ class BatchTranslator:
         series_context: str = "",
         glossary: Optional[Dict[str, str]] = None,
     ) -> str:
-        tone_desc = TONE_PRESETS.get(self.cfg.translate.tone_preset, TONE_PRESETS["movie_tv"])
+        # Load active presets (with user-edited files support)
+        presets_path = Path(self.cfg.translate.presets_dir) if self.cfg.translate.presets_dir else None
+        active_presets = load_tone_presets(presets_path)
+
+        tone_desc = active_presets.get(self.cfg.translate.tone_preset, active_presets.get("movie_tv", ""))
         parts = [
             "شما یک مترجم حرفه‌ای زیرنویس به زبان فارسی هستید.",
             f"سبک و لحن ترجمه: {tone_desc}",
         ]
+        if self.cfg.translate.custom_prompt:
+            parts.append(f"دستورالعمل سفارشی: {self.cfg.translate.custom_prompt}")
         if series_context:
             parts.append(f"زمینه اثر/خلاصه: {series_context}")
         if glossary:
@@ -455,6 +498,7 @@ class BatchTranslator:
                             new_p = self.normalizer.process(retrans_res[it.payload_id], is_ass=False)
                             new_text, _ = self.protector.restore(new_p, it.protected, is_ass=is_ass)
                             subs.events[it.line_index].text = new_text
+                            report.qc_fixed_count += 1
                 except Exception:
                     pass
 

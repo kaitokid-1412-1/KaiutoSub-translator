@@ -55,6 +55,8 @@ class TranslateConfig:
     translate_sdh_cues: bool = True
     temperature: float = 0.3
     tone_preset: str = "movie_tv"
+    custom_prompt: Optional[str] = None
+    presets_dir: Optional[str] = None
 
 
 @dataclass

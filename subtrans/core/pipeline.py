@@ -10,11 +10,13 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from subtrans.core.config import Config, get_user_data_dir
+from subtrans.core.context import ContextManager, extract_media_info
 from subtrans.core.extract import (
     extract_subtitle_track,
     find_external_subtitle,
     is_subtitle_already_persian,
 )
+from subtrans.core.glossary import GlossaryManager
 from subtrans.core.probe import choose_best_subtitle_track, probe_subtitles
 from subtrans.core.store import TranslationStore
 from subtrans.core.translate import BatchTranslator
@@ -150,6 +152,18 @@ class Pipeline:
         store = self.store or TranslationStore(job_dir=job_dir)
         translator = BatchTranslator(config=self.cfg, store=store)
 
+        # M5: Series Context & Glossary
+        context_mgr = ContextManager(cache_dir=job_dir, llm_client=translator.llm)
+        glossary_mgr = GlossaryManager(base_dir=job_dir, llm_client=translator.llm)
+        loaded_glossary = glossary_mgr.load_glossary(job_dir)
+        prompt_glossary = loaded_glossary.to_prompt_dict() if loaded_glossary else None
+
+        # Resolve series context once per series / job
+        first_input_path = tasks[0].path if tasks else input_path
+        media_info = extract_media_info(str(first_input_path))
+        series_context = context_mgr.resolve_context(job_dir, media_info)
+        series_prompt_text = series_context.to_prompt_text() if series_context else ""
+
         for task in tasks:
             def emit(st: Stage, status: StageStatus, msg: str):
                 task.set_stage(st, status, msg)
@@ -235,14 +249,18 @@ class Pipeline:
                     if on_event:
                         on_event(task, Stage.TRANSLATE, StageStatus.RUNNING, f"{msg} ({done}/{total})")
 
+                emit(Stage.CONTEXT, StageStatus.SUCCESS, f"کانتکست: {series_context.title or 'عمومی'}")
                 saved_path, rep = translator.translate_file(
                     subtitle_path=sub_to_translate,
                     output_path=target_out,
                     job_id=job_id,
+                    series_context=series_prompt_text,
+                    glossary=prompt_glossary,
                     progress_callback=on_sub_progress,
                 )
                 task.output_path = saved_path
                 emit(Stage.TRANSLATE, StageStatus.SUCCESS, f"ترجمه موفق ({rep.translated_count} خط)")
+                emit(Stage.QC, StageStatus.SUCCESS, f"QC پاس شد ({rep.qc_fixed_count} خط بازنویسی شد)")
                 emit(Stage.WRITE, StageStatus.SUCCESS, f"ذخیره شد: {saved_path.name}")
             except Exception as e:
                 emit(Stage.TRANSLATE, StageStatus.FAILED, f"خطا در ترجمه: {e}")

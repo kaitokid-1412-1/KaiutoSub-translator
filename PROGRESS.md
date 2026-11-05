@@ -1,6 +1,6 @@
 # PROGRESS
 
-Current milestone: M4 (Local Persian Web UI)
+Current milestone: M5 (Context Quality, Guessit, Glossary & Presets)
 
 ## Done:
 - **2026-11-05:** Project initialization and directory layout scaffolding matching SPEC section 3.
@@ -28,11 +28,17 @@ Current milestone: M4 (Local Persian Web UI)
 - **2026-11-05:** Web server implemented in `subtrans/web/server.py` with Host/Origin validation, token authentication (header/cookie/query), masked API keys, free port detection, and SSE progress streaming.
 - **2026-11-05:** Persian RTL UI implemented in `static/index.html`, `static/style.css`, and `static/app.js` (Folder picker subprocess, model fetch & test, dry-run estimate, queue table with stage pills, live log console).
 - **2026-11-05:** Web security and API tests implemented in `tests/test_web.py`; all 47/47 tests passing.
+- **2026-11-05:** Milestone M5 implemented: `guessit` metadata parser for anime fansubs and TV series filenames in `subtrans/core/context.py`.
+- **2026-11-05:** Series context generator and JSON cache (`series_context.json`) with character gender/role detection to guide Persian pronouns and verbs.
+- **2026-11-05:** Glossary management (`glossary.json`) in `subtrans/core/glossary.py` supporting custom transliterations, keep-terms, and automatic name extraction from initial episodes.
+- **2026-11-05:** Editable text-file tone presets in `user_data_dir/presets/` with support for custom user presets and system prompt overrides.
+- **2026-11-05:** Web UI updated with Context stage pill, custom prompt textarea, and glossary inputs.
+- **2026-11-05:** Comprehensive test suite in `tests/test_context_glossary.py`; all 54/54 tests passing.
 
 ## Next 3 steps:
-1. Milestone M5: Integrate `guessit` for series title, season, and episode metadata extraction from filenames.
-2. Milestone M5: Implement series context caching and LLM prompt enrichment (`context.py`).
-3. Milestone M5: Implement user-editable `glossary.json` and tone preset management (`glossary.py`).
+1. Milestone M6: Implement bitmap subtitle OCR support (PGS/VobSub via SubtitleEdit CLI) in `subtrans/core/ocr.py`.
+2. Milestone M6: Add watchdog timer for OCR process to kill frozen instances.
+3. Milestone M6: User error-message pass and optional single-file executable packaging.
 
 ## How to run tests:
 ```bash
@@ -48,6 +54,8 @@ python -m pytest tests/ -v
 - QC pass excludes non-translatable lines (music/numbers, drawings, comments) and ASS escape sequences from Latin residue checks.
 - Subtitle extraction automatically infers target extension (`.fa.ass` or `.fa.srt`) from the extracted subtitle stream rather than the video container format.
 - Run folder picker dialog via `tkinter` in an isolated child process to never block the async event loop of the web server.
+- Call LLM for `series_context` once per job/series, persisting it in `series_context.json` so all subsequent episodes share narrative consistency without incurring extra tokens.
+- Save tone presets as plain text files in the app data directory so users can edit descriptions directly with Notepad or any text editor.
 
 ## Known issues / untested on Windows:
 - SubtitleEdit CLI switches for PGS/VobSub OCR need verification against current SubtitleEdit releases before M6.
@@ -57,3 +65,4 @@ python -m pytest tests/ -v
 - Windows batch scripts must use `chcp 65001` for proper UTF-8 Persian character rendering.
 - `pysubs2` standardizes SRT inline formatting (`<i>`, `<b>`) into SSA override tags `{\i1}` upon loading and converts them back on export.
 - Standard ASS `Encoding` attribute value for Arabic/Persian script is `178`.
+- `guessit` extracts `title`, `season`, `episode`, and `release_group` cleanly from both fansub brackets (`[Group] Show - 05`) and standard scene formats (`Show.S01E03`).
